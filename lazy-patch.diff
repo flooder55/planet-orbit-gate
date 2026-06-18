@@ -1,0 +1,29 @@
+﻿--- a/index.html
++++ b/index.html
+@@ lazy-load instead of all-8 upfront
+
+   function startOrbitModelLoading() {
+     if (state.modelLoadingStarted) return;
+     state.modelLoadingStarted = true;
+-    if (state.selected !== CUSTOM_PLANET_ID) queuePlanetModel(state.selected, true);
+-    PLANETS.forEach((planet) => queuePlanetModel(planet.id, false));
++    // 懒加载：只加载当前选中的行星及其邻居，不一次性加载全部 8 颗
++    preloadPlanetAndNeighbors(state.selected);
+     scheduleNextPlanetModelLoad();
+   }
+ 
++  function preloadPlanetAndNeighbors(planetId) {
++    if (planetId === CUSTOM_PLANET_ID) return;
++    const idx = PLANETS.findIndex(p => p.id === planetId);
++    if (idx < 0) return;
++    // 当前行星优先级最高
++    queuePlanetModel(planetId, true);
++    // 预加载左右邻居
++    const neighbors = [
++      PLANETS[(idx + 1) % PLANETS.length],
++      PLANETS[(idx - 1 + PLANETS.length) % PLANETS.length]
++    ];
++    neighbors.forEach(p => queuePlanetModel(p.id, false));
++  }
++
+   function queuePlanetModel(id, priority) {

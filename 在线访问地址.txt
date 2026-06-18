@@ -1,0 +1,13 @@
+八大行星轨道舱 在线访问地址
+
+固定静态在线访问地址：
+https://flooder55.github.io/planet-orbit-gate/
+
+GitHub 仓库：
+https://github.com/flooder55/planet-orbit-gate
+
+说明：
+1. 本版本为 GitHub Pages 静态展示版，适合长期公开访问。
+2. 页面包含封面星系、八大行星 3D 轨道舱、NASA 模型浏览和手动星球工坊。
+3. 页面全部内容由静态文件提供，打开链接即可浏览。
+4. 如果浏览器显示旧界面，请使用无痕模式打开，或在地址后追加 ?v=20260616-static。

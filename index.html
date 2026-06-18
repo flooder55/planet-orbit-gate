@@ -1,0 +1,2787 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07090f">
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%2307090f"/><circle cx="32" cy="32" r="20" fill="%23f4bd50"/><path d="M10 36c14-9 32-13 44-8" fill="none" stroke="%2364d9cf" stroke-width="4" stroke-linecap="round"/></svg>'>
+  <title>八大行星轨道舱</title>
+  <style>
+    /* 全局视觉变量：统一深色宇宙背景、青金强调色、8px 卡片圆角和基础字体。 */
+    :root {
+      color-scheme: dark;
+      --ink: #f6f7fb;
+      --muted: #a9b2c4;
+      --soft: rgba(246, 247, 251, .72);
+      --panel: rgba(12, 16, 26, .72);
+      --panel-strong: rgba(14, 20, 33, .88);
+      --line: rgba(255, 255, 255, .16);
+      --cyan: #64d9cf;
+      --gold: #f4bd50;
+      --coral: #ef7a5f;
+      --green: #77c983;
+      --violet: #9a88f0;
+      --radius: 8px;
+      --shadow: 0 22px 60px rgba(0, 0, 0, .36);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: #07090f;
+      max-width: 100%;
+      overflow-x: hidden;
+      overscroll-behavior-x: none;
+    }
+
+    body {
+      margin: 0;
+      width: 100%;
+      max-width: 100%;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overscroll-behavior-x: none;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #080a10 0%, #101424 44%, #080a10 100%);
+    }
+
+    /* 封面页：Three.js WebGL 粒子星系负责主体画面，CSS 叠加星核、呼吸光、扫描线和玻璃按钮。 */
+    .galaxy-intro {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      overflow: hidden;
+      color: #fff;
+      background:
+        radial-gradient(ellipse 76% 54% at 50% 38%, rgba(34, 24, 58, .34), transparent 72%),
+        linear-gradient(180deg, #02030a 0%, #050612 48%, #010104 100%);
+      transition: opacity .72s ease, visibility .72s ease;
+      isolation: isolate;
+    }
+
+    .galaxy-intro.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .galaxy-intro.is-exiting {
+      pointer-events: none;
+    }
+
+    .galaxy-intro.is-exiting .galaxy-header,
+    .galaxy-intro.is-exiting .galaxy-title,
+    .galaxy-intro.is-exiting .galaxy-footnote,
+    .galaxy-intro.is-exiting .galaxy-breathing {
+      opacity: 0;
+      transition: opacity .36s ease;
+    }
+
+    #galaxyCanvas {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: saturate(1.22) brightness(1.08) contrast(1.01) blur(.16px);
+    }
+
+    .galaxy-wash {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(ellipse 88% 62% at 50% 12%, var(--cover-wash-top, rgba(58, 128, 255, .18)), transparent 76%),
+        radial-gradient(ellipse 78% 54% at 50% 46%, var(--cover-wash-mid, rgba(244, 150, 44, .14)), var(--cover-wash-bridge, rgba(52, 116, 220, .055)) 56%, transparent 82%),
+        radial-gradient(ellipse 72% 52% at 82% 64%, var(--cover-wash-side, rgba(77, 172, 255, .1)), transparent 82%),
+        radial-gradient(ellipse 92% 58% at 50% 98%, var(--cover-wash-bottom, rgba(33, 104, 255, .1)), transparent 76%),
+        linear-gradient(180deg, rgba(0, 0, 0, .015), rgba(0, 0, 0, .22));
+      pointer-events: none;
+    }
+
+    .galaxy-core {
+      position: absolute;
+      left: 50%;
+      top: 47%;
+      z-index: 1;
+      width: min(760px, 96vw);
+      aspect-ratio: 1;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, var(--cover-core-0, rgba(255, 96, 18, .46)) 0 8%, var(--cover-core-1, rgba(255, 132, 20, .32)) 22%, var(--cover-core-2, rgba(255, 180, 36, .17)) 42%, var(--cover-core-3, rgba(77, 148, 255, .075)) 62%, transparent 82%);
+      mix-blend-mode: screen;
+      filter: blur(2px);
+      opacity: .34;
+      animation: galaxyCorePulse 7.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .galaxy-core::before,
+    .galaxy-core::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border: 1px solid rgba(77, 172, 255, .2);
+      border-radius: 50%;
+      transform: rotateX(68deg) rotateZ(-18deg);
+      box-shadow: 0 0 42px rgba(77, 172, 255, .16);
+      opacity: .22;
+    }
+
+    .galaxy-core::after {
+      inset: 30%;
+      border-color: rgba(244, 189, 80, .22);
+      transform: rotateX(68deg) rotateZ(24deg);
+      box-shadow: 0 0 34px rgba(244, 189, 80, .18);
+      animation: galaxyRingDrift 16s linear infinite;
+      opacity: .18;
+    }
+
+    .galaxy-breathing {
+      position: absolute;
+      left: 50%;
+      bottom: max(32px, env(safe-area-inset-bottom));
+      z-index: 1;
+      width: min(520px, calc(100% - 48px));
+      height: 64px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .galaxy-breathing::before,
+    .galaxy-breathing::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+    }
+
+    .galaxy-breathing::before {
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(77, 172, 255, .36), rgba(255, 255, 255, .9), rgba(36, 111, 255, .42), transparent);
+      filter: blur(.2px);
+      animation: galaxyBreathe 5.8s ease-in-out infinite;
+    }
+
+    .galaxy-breathing::after {
+      width: 70%;
+      height: 26px;
+      background: radial-gradient(ellipse, rgba(77, 172, 255, .22), rgba(36, 111, 255, .1) 48%, transparent 72%);
+      filter: blur(12px);
+      animation: galaxyBreatheGlow 5.8s ease-in-out infinite;
+    }
+
+    .galaxy-header {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      z-index: 2;
+      min-height: 82px;
+      padding: 18px max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .galaxy-logo {
+      font-size: clamp(20px, 3vw, 42px);
+      font-weight: 950;
+      letter-spacing: 0;
+      color: transparent;
+      background: linear-gradient(100deg, #ffffff 0%, #dff7ff 18%, #55c2ff 32%, #ffffff 48%, #207dff 64%, #c8efff 82%, #ffffff 100%);
+      background-size: 320% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      animation: galaxyTextFlow 5.4s linear infinite;
+    }
+
+    .galaxy-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .galaxy-palette {
+      min-height: 38px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: var(--radius);
+      background: rgba(6, 10, 18, .34);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, .22);
+    }
+
+    .galaxy-palette button {
+      min-height: 30px;
+      padding: 0 8px 0 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: rgba(255, 255, 255, .76);
+      background: rgba(255, 255, 255, .05);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .galaxy-palette button:hover,
+    .galaxy-palette button:focus-visible,
+    .galaxy-palette button[aria-pressed="true"] {
+      outline: none;
+      color: #fff;
+      border-color: rgba(255, 255, 255, .26);
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .palette-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--swatch-a), var(--swatch-b) 48%, var(--swatch-c));
+      box-shadow: 0 0 16px color-mix(in srgb, var(--swatch-b) 56%, transparent);
+      flex: 0 0 auto;
+    }
+
+    .galaxy-enter,
+    .galaxy-chip,
+    .nav-btn {
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: var(--radius);
+      color: rgba(255, 255, 255, .88);
+      background: rgba(255, 255, 255, .06);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .25);
+      font-weight: 900;
+      overflow: hidden;
+    }
+
+    .galaxy-chip {
+      min-height: 38px;
+      padding: 0 13px;
+      display: flex;
+      align-items: center;
+      color: rgba(255, 255, 255, .62);
+      font-size: 13px;
+    }
+
+    .nav-btn {
+      min-width: 46px;
+      min-height: 38px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .galaxy-enter {
+      min-height: 44px;
+      padding: 0 18px;
+      font-size: 15px;
+      transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+
+    .galaxy-enter::before,
+    .nav-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-120%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .18), rgba(100, 217, 207, .2), transparent);
+      transition: transform .55s ease;
+      pointer-events: none;
+    }
+
+    .galaxy-enter:hover,
+    .galaxy-enter:focus-visible,
+    .nav-btn:hover,
+    .nav-btn:focus-visible {
+      outline: none;
+      transform: translateY(-1px);
+      color: #fff;
+      border-color: rgba(100, 217, 207, .62);
+      background: rgba(100, 217, 207, .15);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .3), 0 0 28px rgba(100, 217, 207, .18);
+    }
+
+    .galaxy-enter:hover::before,
+    .galaxy-enter:focus-visible::before,
+    .nav-btn:hover::before,
+    .nav-btn:focus-visible::before {
+      transform: translateX(120%);
+    }
+
+    .galaxy-title {
+      position: absolute;
+      left: 50%;
+      bottom: max(62px, 7vh);
+      z-index: 2;
+      width: min(860px, calc(100% - 36px));
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .galaxy-kicker {
+      width: fit-content;
+      min-height: 32px;
+      margin: 0 auto 18px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      border: 1px solid rgba(244, 189, 80, .34);
+      border-radius: var(--radius);
+      color: #d9efff;
+      background: rgba(77, 172, 255, .08);
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .galaxy-title h1 {
+      margin: 0;
+      color: transparent;
+      background: linear-gradient(100deg, #ffffff 0%, #d9f5ff 16%, #4cc0ff 31%, #ffffff 47%, #1d7cff 64%, #bceaff 81%, #ffffff 100%);
+      background-size: 340% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      font-size: 104px;
+      line-height: .9;
+      letter-spacing: 0;
+    }
+
+    .galaxy-title p {
+      margin: 18px auto 0;
+      max-width: 760px;
+      color: rgba(226, 242, 255, .72);
+      font-size: clamp(15px, 2vw, 19px);
+      line-height: 1.55;
+    }
+
+    .galaxy-title .galaxy-enter {
+      margin-top: 28px;
+      min-width: 150px;
+      min-height: 52px;
+      color: var(--cover-action-text, #05224a);
+      background: linear-gradient(135deg, var(--cover-action-a, var(--gold)), var(--cover-action-b, #fff0b5) 48%, var(--cover-action-c, var(--cyan)));
+      border-color: rgba(255, 255, 255, .28);
+      box-shadow:
+        0 18px 56px color-mix(in srgb, var(--cover-action-a, var(--gold)) 26%, transparent),
+        0 0 34px color-mix(in srgb, var(--cover-action-c, var(--cyan)) 18%, transparent);
+      pointer-events: auto;
+    }
+
+    .galaxy-footnote {
+      position: absolute;
+      left: 50%;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      z-index: 2;
+      width: min(720px, calc(100% - 36px));
+      transform: translateX(-50%);
+      color: rgba(205, 230, 255, .52);
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.6;
+      pointer-events: none;
+    }
+
+    .galaxy-title h1 {
+      position: relative;
+      display: block;
+      overflow: hidden;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+      animation: galaxyTextFlow 4.2s linear infinite;
+    }
+
+    @keyframes galaxyCorePulse {
+      0%, 100% {
+        opacity: .74;
+        transform: translate(-50%, -50%) scale(.92);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.04);
+      }
+    }
+
+    @keyframes galaxyRingDrift {
+      0% { transform: rotateX(68deg) rotateZ(24deg); }
+      100% { transform: rotateX(68deg) rotateZ(384deg); }
+    }
+
+    @keyframes galaxyBreathe {
+      0%, 100% {
+        opacity: .34;
+        transform: translate(-50%, -50%) scaleX(.78);
+      }
+      50% {
+        opacity: .95;
+        transform: translate(-50%, -50%) scaleX(1.08);
+      }
+    }
+
+    @keyframes galaxyBreatheGlow {
+      0%, 100% {
+        opacity: .46;
+        transform: translate(-50%, -50%) scale(.82);
+      }
+      50% {
+        opacity: .9;
+        transform: translate(-50%, -50%) scale(1.16);
+      }
+    }
+
+    @keyframes galaxyTextFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 340% 50%; }
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    /* 轨道舱主页面：全屏 WebGL 太阳系作为底层，顶部导航、左侧导语、右侧资料面板和底部控制条覆盖其上。 */
+    .stage {
+      position: relative;
+      width: 100%;
+      max-width: 100vw;
+      min-height: 100svh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 52%, rgba(246, 186, 76, .12), transparent 22%),
+        linear-gradient(135deg, #07090f 0%, #0e1722 45%, #120f1c 100%);
+    }
+
+    #spaceCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .labels {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .space-label {
+      position: absolute;
+      min-width: 44px;
+      padding: 4px 7px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, .86);
+      background: rgba(7, 9, 15, .58);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      text-align: center;
+      transform: translate(-50%, -50%);
+      backdrop-filter: blur(10px);
+      opacity: .92;
+      transition: opacity .18s ease;
+    }
+
+    .interface {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      padding: max(16px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(120px, 1fr) minmax(300px, 392px);
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .topbar,
+    .hero-copy,
+    .info-panel,
+    .control-bar,
+    .planet-dock {
+      pointer-events: auto;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 8px 10px 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(7, 9, 15, .58);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      color: #091014;
+      background:
+        linear-gradient(135deg, var(--gold), #fff2b9 48%, var(--cyan));
+      font-weight: 950;
+      box-shadow: 0 14px 34px rgba(244, 189, 80, .22);
+      flex: 0 0 auto;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 950;
+      line-height: 1.18;
+      letter-spacing: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand-sub {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .nav a {
+      min-height: 36px;
+      padding: 0 11px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius);
+      color: rgba(255, 255, 255, .78);
+      background: rgba(255, 255, 255, .06);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      outline: 2px solid rgba(100, 217, 207, .38);
+      outline-offset: 2px;
+      color: #fff;
+      background: rgba(100, 217, 207, .14);
+    }
+
+    .hero-copy {
+      grid-column: 1;
+      grid-row: 2;
+      align-self: start;
+      max-width: 360px;
+      padding: 18px 0 0;
+    }
+
+    .eyebrow {
+      width: fit-content;
+      min-height: 30px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(244, 189, 80, .36);
+      border-radius: var(--radius);
+      color: #ffe5a0;
+      background: rgba(244, 189, 80, .1);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .hero-copy h1 {
+      margin: 16px 0 12px;
+      max-width: 350px;
+      font-size: clamp(42px, 5vw, 70px);
+      line-height: .96;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 340px;
+      color: rgba(242, 245, 255, .78);
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    .meta-row {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .meta-chip {
+      min-height: 58px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(7, 9, 15, .46);
+      backdrop-filter: blur(14px);
+    }
+
+    .meta-chip b {
+      display: block;
+      color: #fff;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .meta-chip span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .info-panel {
+      grid-column: 3;
+      grid-row: 2;
+      align-self: start;
+      position: relative;
+      min-height: 0;
+      max-height: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .info-collapse {
+      display: none;
+    }
+
+    .info-head {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .planet-kicker {
+      margin: 0 0 7px;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .planet-name {
+      margin: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      color: #fff;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .planet-name span {
+      color: rgba(255, 255, 255, .52);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .planet-summary {
+      margin: 12px 0 0;
+      color: rgba(243, 246, 255, .78);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .facts-grid {
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .fact {
+      min-height: 68px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .055);
+    }
+
+    .fact small {
+      display: block;
+      color: rgba(255, 255, 255, .56);
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .fact strong {
+      display: block;
+      margin-top: 7px;
+      color: #fff;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .planet-points {
+      margin: 0;
+      padding: 0 18px 16px;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .planet-points li {
+      position: relative;
+      padding-left: 16px;
+      color: rgba(244, 247, 255, .76);
+      font-size: 13px;
+      line-height: 1.58;
+    }
+
+    .planet-points li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .66em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--planet-color, var(--cyan));
+      box-shadow: 0 0 14px var(--planet-color, var(--cyan));
+    }
+
+    .culture-box {
+      margin: 0 18px 18px;
+      padding: 13px;
+      border: 1px solid rgba(244, 189, 80, .18);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(244, 189, 80, .09), rgba(100, 217, 207, .045)),
+        rgba(255, 255, 255, .045);
+    }
+
+    .culture-box h3 {
+      margin: 0 0 8px;
+      color: #ffe5a0;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .culture-box p {
+      margin: 0;
+      color: rgba(246, 247, 251, .76);
+      font-size: 13px;
+      line-height: 1.68;
+    }
+
+    .culture-tags {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .culture-tags span {
+      min-height: 26px;
+      padding: 0 8px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, .78);
+      background: rgba(7, 9, 15, .42);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .knowledge-box {
+      margin: 0 18px 12px;
+      padding: 13px;
+      border: 1px solid rgba(100, 217, 207, .18);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(100, 217, 207, .085), rgba(154, 136, 240, .05)),
+        rgba(255, 255, 255, .04);
+    }
+
+    .knowledge-box h3 {
+      margin: 0 0 9px;
+      color: #d8fffb;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    .knowledge-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .knowledge-list li {
+      position: relative;
+      padding-left: 16px;
+      color: rgba(246, 247, 251, .76);
+      font-size: 13px;
+      line-height: 1.62;
+    }
+
+    .knowledge-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .65em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 14px rgba(100, 217, 207, .65);
+    }
+
+    /* 高清图谱模式：在不离开轨道舱的情况下，用图谱式卡片替换当前行星的 3D 展示重点。 */
+      position: absolute;
+      left: max(18px, env(safe-area-inset-left));
+      top: 90px;
+      bottom: 176px;
+      z-index: 6;
+      width: min(520px, calc(100vw - 470px));
+      min-width: 380px;
+      pointer-events: auto;
+      color: #f7f2df;
+      filter: drop-shadow(0 30px 70px rgba(0, 0, 0, .42));
+    }
+
+      display: none;
+    }
+
+      position: relative;
+      height: 100%;
+      overflow: auto;
+      border: 1px solid rgba(222, 198, 129, .48);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 28% 8%, rgba(246, 229, 160, .23), transparent 28%),
+        linear-gradient(180deg, rgba(11, 59, 55, .94) 0%, rgba(12, 72, 66, .88) 48%, rgba(229, 216, 170, .92) 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, .08),
+        0 28px 90px rgba(0, 0, 0, .42);
+    }
+
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      opacity: .42;
+    }
+
+      inset: 0;
+      background:
+        linear-gradient(115deg, transparent 0 22%, rgba(246, 229, 160, .16) 22.3% 22.8%, transparent 23% 100%),
+        linear-gradient(28deg, transparent 0 58%, rgba(246, 229, 160, .13) 58.3% 58.8%, transparent 59% 100%),
+        radial-gradient(circle at 18% 18%, rgba(255, 246, 194, .72) 0 2px, transparent 3px),
+        radial-gradient(circle at 36% 12%, rgba(255, 246, 194, .72) 0 2px, transparent 3px),
+        radial-gradient(circle at 54% 22%, rgba(255, 246, 194, .72) 0 2px, transparent 3px),
+        radial-gradient(circle at 76% 16%, rgba(255, 246, 194, .72) 0 2px, transparent 3px),
+        radial-gradient(circle at 83% 34%, rgba(255, 246, 194, .72) 0 2px, transparent 3px);
+    }
+
+      right: -46px;
+      bottom: -58px;
+      width: 220px;
+      height: 220px;
+      border: 1px solid rgba(21, 87, 78, .22);
+      border-radius: 50%;
+      background:
+        repeating-conic-gradient(from 14deg, rgba(17, 86, 78, .16) 0 8deg, transparent 8deg 14deg),
+        radial-gradient(circle, transparent 0 56%, rgba(17, 86, 78, .14) 57% 58%, transparent 59%);
+    }
+
+      position: relative;
+      min-height: 260px;
+      padding: 22px 24px 16px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(2, 12, 18, .18), rgba(2, 12, 18, .06)),
+        radial-gradient(circle at 54% 34%, rgba(255, 255, 255, .18), transparent 44%);
+    }
+
+      position: relative;
+      z-index: 2;
+      width: max-content;
+      max-width: 100%;
+      min-height: 28px;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(246, 229, 160, .44);
+      border-radius: 999px;
+      color: #fff3bb;
+      background: rgba(246, 229, 160, .14);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+      position: relative;
+      z-index: 2;
+      margin: 18px 0 0;
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      color: #fff;
+      font-size: clamp(44px, 6vw, 76px);
+      line-height: .88;
+      letter-spacing: 0;
+      text-shadow: 0 12px 28px rgba(0, 0, 0, .42);
+    }
+
+      margin-bottom: 7px;
+      color: rgba(246, 229, 160, .92);
+      font-size: 15px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+      position: absolute;
+      right: 18px;
+      top: 24px;
+      width: min(42%, 190px);
+      aspect-ratio: 1;
+      border: 2px solid rgba(246, 229, 160, .7);
+      border-radius: 50%;
+      background: rgba(3, 11, 15, .72);
+      box-shadow:
+        0 20px 54px rgba(0, 0, 0, .42),
+        inset 0 0 0 8px rgba(255, 255, 255, .045);
+    }
+
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+      content: "";
+      position: absolute;
+      inset: -12px;
+      border-radius: 50%;
+      border: 1px dashed rgba(246, 229, 160, .42);
+      pointer-events: none;
+    }
+
+      position: relative;
+      z-index: 2;
+      margin: 26px -24px 0;
+      min-height: 46px;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      color: #185e58;
+      background: linear-gradient(90deg, rgba(245, 218, 130, .98), rgba(238, 206, 116, .88));
+      font-size: 17px;
+      font-weight: 950;
+      line-height: 1.35;
+    }
+
+      position: relative;
+      z-index: 1;
+      padding: 0 24px 24px;
+    }
+
+      margin-top: 14px;
+      padding: 15px;
+      border: 1px solid rgba(246, 229, 160, .24);
+      border-radius: 8px;
+      background: rgba(17, 91, 82, .78);
+    }
+
+      color: #26534e;
+      border-color: rgba(21, 87, 78, .18);
+      background: rgba(255, 244, 201, .78);
+    }
+
+      margin: 0 0 9px;
+      color: #fff3bb;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+      color: #125d56;
+    }
+
+      margin: 0;
+      color: rgba(255, 255, 255, .82);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+      color: rgba(37, 68, 64, .86);
+    }
+
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+      position: relative;
+      padding-left: 15px;
+      font-size: 13px;
+      line-height: 1.58;
+    }
+
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .67em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--planet-color, var(--gold));
+    }
+
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+      min-height: 26px;
+      padding: 0 9px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(21, 87, 78, .2);
+      border-radius: 999px;
+      color: #15584f;
+      background: rgba(255, 255, 255, .48);
+      font-size: 11px;
+      font-weight: 900;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    页面 1：3D 星系入口。
+    canvas 渲染 WebGL 粒子星系；galaxy-wash/core/breathing 是 CSS 光效层；
+  -->
+  <section class="galaxy-intro" id="galaxyIntro" aria-label="3D 星系入口">
+    <canvas id="galaxyCanvas" aria-hidden="true"></canvas>
+    <div class="galaxy-wash" aria-hidden="true"></div>
+    <div class="galaxy-core" aria-hidden="true"></div>
+    <div class="galaxy-breathing" aria-hidden="true"></div>
+    <header class="galaxy-header">
+      <div class="galaxy-logo">ORBIT GATE</div>
+      <div class="galaxy-nav">
+        <span class="galaxy-chip">3D 星系入口</span>
+        <button class="galaxy-enter" type="button" data-enter-solar>进入太阳系</button>
+      </div>
+    </header>
+    <div class="galaxy-title">
+      <div class="galaxy-kicker">八大行星轨道舱</div>
+      <h1>星系漫游</h1>
+      <p>穿过粒子星河后进入太阳系，观察八大行星的轨道运动和行星资料。</p>
+      <button class="galaxy-enter" type="button" data-enter-solar>进入太阳系</button>
+    </div>
+    <p class="galaxy-footnote">点击“进入太阳系”进入八大行星轨道舱</p>
+  </section>
+
+  <main>
+    <!--
+      页面 2：八大行星轨道舱。
+      spaceCanvas 是主 Three.js 太阳系；interface 承载资料面板、控制条和行星选择按钮。
+    -->
+    <section class="stage" id="orbit">
+      <canvas id="spaceCanvas" aria-label="八大行星三维轨道"></canvas>
+      <div class="labels" id="labels"></div>
+      <div class="loading" id="loading">加载中…</div>
+            <div class="interface">
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">8</div>
+            <div>
+              <p class="brand-title">八大行星轨道舱</p>
+              <p class="brand-sub">太阳系科普 H5</p>
+            </div>
+          </nav>
+        </header>
+
+        <section class="hero-copy" aria-labelledby="heroTitle">
+          <div class="eyebrow">太阳系动态观测</div>
+          <h1 id="heroTitle">八大行星</h1>
+          <p class="lead">水星、金星、地球、火星、木星、土星、天王星、海王星沿压缩轨道运行，模型素材取自 NASA Science 3D Resources。</p>
+          <div class="meta-row" aria-label="作品参数">
+            <div class="meta-chip">
+              <b>8</b>
+              <span>行星模型</span>
+            </div>
+            <div class="meta-chip">
+              <b>3D</b>
+              <span>轨道交互</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="info-panel" id="planetInfo" aria-live="polite"></aside>
+
+        <section class="control-bar" aria-label="轨道控制">
+          <div class="tools">
+            <div class="tool-buttons">
+              <button class="tool-btn" id="pauseBtn" type="button" aria-pressed="false">暂停</button>
+              <button class="tool-btn" id="systemBtn" type="button">全景</button>
+              <button class="tool-btn" id="labelBtn" type="button" aria-pressed="true">标签</button>
+                          </div>
+            <label class="speed-line" for="speedRange">
+              <span>时间流速</span>
+              <input id="speedRange" type="range" min="0" max="0.3" step="0.01" value="0.08">
+              <span id="speedText">0.08 年/秒</span>
+            </label>
+          </div>
+          <div class="planet-dock" id="planetDock" aria-label="选择行星"></div>
+        </section>
+      </div>
+    </section>
+
+  </main>
+
+  <!--
+    独立 Three.js 场景逐颗展示 NASA GLB 模型，滚轮、触摸、键盘和右侧圆点都能切换行星。
+  -->
+  
+
+  <script src="./assets/vendor/three.min.js"></script>
+  <script src="./assets/vendor/OrbitControls.js"></script>
+<script>
+  const PLANETS = [
+      {
+        id: "mercury", name: "??", en: "Mercury", color: "#b7ad9d",
+        orbit: 9.4, oval: 1.06, size: .72, speed: 4.12, rotation: 1.9, tilt: .01,
+        image: "./assets/textures/mercury.jpg",
+        type: "????", diameter: "4,879 km", year: "88 ???", distance: "5,790 ? km",
+        summary: "?????????????????????????????????????",
+        culture: { text: "??????????????????????????", tags: ["?????", "????"] },
+        points: ["????????????????", "???????????????????", "????????????????????"]
+      },
+      {
+        id: "venus", name: "??", en: "Venus", color: "#e6c07b",
+        orbit: 12.8, oval: 1.04, size: .92, speed: 1.62, rotation: -.72, tilt: .02,
+        image: "./assets/textures/venus.jpg",
+        type: "????", diameter: "12,104 km", year: "225 ???", distance: "1.082 ? km",
+        summary: "???????????????????????????????????????????",
+        culture: { text: "????????????????????????????????????", tags: ["?????", "????"] },
+        points: ["???????????????????", "????????????????????", "??????????????????????"]
+      },
+      {
+        id: "earth", name: "??", en: "Earth", color: "#5fa8ff",
+        orbit: 16.4, oval: 1.03, size: 1, speed: 1, rotation: 2.35, tilt: .08,
+        image: "./assets/textures/earth.jpg",
+        type: "????", diameter: "12,742 km", year: "365.25 ???", distance: "1.496 ? km",
+        summary: "??????????????????????????????????????????????",
+        culture: { text: "??????????????????????????????", tags: ["??????/?", "??"] },
+        points: ["??????????????????????", "??????????????????", "??????????????????"]
+      },
+      {
+        id: "mars", name: "??", en: "Mars", color: "#dd7057",
+        orbit: 20.7, oval: 1.08, size: .86, speed: .53, rotation: 2.2, tilt: .11,
+        image: "./assets/textures/mars.jpg",
+        type: "????", diameter: "6,779 km", year: "687 ???", distance: "2.279 ? km",
+        summary: "??????????????????????????????????????????????",
+        culture: { text: "????????????????????????????????", tags: ["?????", "????"] },
+        points: ["????????????????????", "??????????????", "????????????????????"]
+      },
+      {
+        id: "jupiter", name: "??", en: "Jupiter", color: "#e3b37d",
+        orbit: 28.2, oval: 1.05, size: 2.15, speed: .084, rotation: 3.6, tilt: .04,
+        image: "./assets/textures/jupiter.jpg",
+        type: "?????", diameter: "139,820 km", year: "11.86 ???", distance: "7.785 ? km",
+        summary: "???????????????????????????????????????????????",
+        culture: { text: "????????????????????????????????", tags: ["?????", "????"] },
+        points: ["?????????????????????", "????????????????????", "????????????????????????????"]
+      },
+      {
+        id: "saturn", name: "??", en: "Saturn", color: "#f0cf8a",
+        orbit: 36, oval: 1.06, size: 1.92, speed: .034, rotation: 3.25, tilt: .16,
+        image: "./assets/textures/saturn.jpg",
+        type: "?????", diameter: "116,460 km", year: "29.45 ???", distance: "14.34 ? km",
+        summary: "????????????????????????????",
+        culture: { text: "???????????????????????????", tags: ["?????/??", "????"] },
+        points: ["??????????????????", "???????????????????????", "??????????????????????"]
+      },
+      {
+        id: "uranus", name: "???", en: "Uranus", color: "#80d6d5",
+        orbit: 44.2, oval: 1.05, size: 1.42, speed: .012, rotation: -2.15, tilt: .33,
+        image: "./assets/textures/uranus.jpg",
+        type: "????", diameter: "50,724 km", year: "84 ???", distance: "28.71 ? km",
+        summary: "????????????????????????????????????",
+        culture: { text: "???????????????????????????????", tags: ["????", "??????"] },
+        points: ["?????????????????", "???????????????????", "?????????????????????"]
+      },
+      {
+        id: "neptune", name: "???", en: "Neptune", color: "#5b79ff",
+        orbit: 52.4, oval: 1.04, size: 1.38, speed: .006, rotation: 2.45, tilt: .18,
+        image: "./assets/textures/neptune.jpg",
+        type: "????", diameter: "49,244 km", year: "164.8 ???", distance: "44.95 ? km",
+        summary: "?????????????????????????????????????",
+        culture: { text: "????????????????????????", tags: ["????", "???????"] },
+        points: ["?????? 165 ????????????????", "????????????????????", "???????????????????????"]
+      }
+    ];
+
+    function text() {
+      return TEXT.zh;
+    }
+
+    const TEXT = {
+      zh: {
+        introChip: "3D ????", introBadge: "???????", introTitle: "????",
+        introLead: "??????????????????????????????",
+        introFootnote: "????????????????",
+        coverThemes: { aurora: "??", gold: "??", amber: "??", cyan: "??" },
+        enterSolar: "???", coverEnter: "??",
+        brandTitle: "???????", brandSub: "????? H5", orbitNav: "???",
+        eyebrow: "???????", heroTitle: "????",
+        lead: "?????????????????????????????????",
+        modelCount: "????", orbitInteraction: "????",
+        pause: "??", play: "??", focus: "??", panorama: "??", labels: "??",
+        speedLabel: "????", yearsPerSecond: "?/?",
+        diameter: "????", year: "????", distance: "????",
+        knowledgeHeader: "?????", cultureHeader: "????????",
+      }
+    };
+
+    const KNOWLEDGE_ZH = {
+      mercury: ["??????????????????", "???? 3:2 ??-?????????????????", "???????????????????", "?????????????????", "????????????????????", "??????????? 38%?", "????????????????????????", "???????????????????????", "???????????????????", "????????????????????????", "???????????????????", "????????????????????????", "?????????????????????????", "???????????????", "??????????????????????????"],
+      venus: ["?????????????????????", "???????????", "?????????????????????", "???????????????????", "?????????????? 90 ???", "?????????", "???????????????????????", "??????????????", "????????????????????????", "?????????????????????", "???????????????????", "????????????????????", "?????????????????????", "??????????????????????", "??????????????????????????"],
+      earth: ["?????????????????", "????????????????????", "???????????????", "????????????", "???????????????????????", "??????????????????", "?????????????", "???????????????????", "??????????????????????", "??????????????????????", "?????? 78% ??? 21% ?????", "???????? 6,371 ???", "??????????????????????", "???????????????????", "????????????????????????"],
+      mars: ["?????????????????", "????????????????????", "?????????????????", "?????????????????", "?????????????????", "??????? 24.6 ??????????", "????????????????", "?????????????????", "????????????????????", "?????????????????????", "???????????????????", "??????????????????????", "???????????????????????", "??????????????????????", "?????????????????"],
+      jupiter: ["??????????????????", "??????????? 10 ???", "???????????????????", "????????????????????????????", "????????????????????????", "??????????????????????", "????????????????????", "???????????????", "???????????", "????????????????????", "???????????????????????????", "????????????????????", "????????????????????????", "?????????????", "???????????????"],
+      saturn: ["?????????????????????", "????????????????????", "???????????????", "?????????????????", "?????????????????", "????????????????????????", "??????????????????????", "????????????????", "???????????????????", "????????????????", "????????????????????", "?????????????????????", "??????????????", "????????????????", "?????????????????????????"],
+      uranus: ["????????? 98 ?????????", "????????????", "????????????", "???? 1781 ?????????????????????", "???????????", "?????????????????????????", "????????????????????", "??? 2 ?????????????????", "???????????????", "???????????????????", "??????????????????????", "????????????????????????", "?????????????????????", "?????? 1977 ???????????", "???????????????????????"],
+      neptune: ["????????????????????", "??????????????????????", "??????????????????", "?????????????????????", "?????????? 165 ??", "???????????????????", "???????????????", "??? 2 ?? 1989 ???????", "???????????????????", "????????????????", "???????????????????", "?????????????????", "?????????????????", "????????????", "??????????????????????????"]
+    };
+
+    const COVER_THEMES = {
+      aurora: {
+        swatch: ["#ff5f7e", "#62e6a8", "#38a3ff"],
+        colors: { core: "#ff4d73", mid: "#62e6a8", bridge: "#38d7ff", outer: "#2559d6", mist: "#42606f" },
+        css: {
+          "--cover-wash-top": "rgba(56, 163, 255, .16)", "--cover-wash-mid": "rgba(255, 95, 126, .14)",
+          "--cover-wash-bridge": "rgba(98, 230, 168, .07)", "--cover-wash-side": "rgba(56, 215, 255, .1)",
+          "--cover-wash-bottom": "rgba(37, 89, 214, .11)", "--cover-core-0": "rgba(255, 77, 115, .46)",
+          "--cover-core-1": "rgba(98, 230, 168, .3)", "--cover-core-2": "rgba(56, 215, 255, .17)",
+          "--cover-core-3": "rgba(37, 89, 214, .08)", "--cover-action-a": "#ff5f7e",
+          "--cover-action-b": "#62e6a8", "--cover-action-c": "#38a3ff", "--cover-action-text": "#061525"
+        }
+      },
+      gold: {
+        swatch: ["#ff7a1e", "#ffd76e", "#6e4a18"],
+        colors: { core: "#ff6216", mid: "#ffc45c", bridge: "#d9942e", outer: "#6a4b1d", mist: "#725a36" },
+        css: {
+          "--cover-wash-top": "rgba(255, 180, 70, .14)", "--cover-wash-mid": "rgba(255, 154, 42, .18)",
+          "--cover-wash-bridge": "rgba(232, 173, 62, .08)", "--cover-wash-side": "rgba(255, 205, 96, .08)",
+          "--cover-wash-bottom": "rgba(195, 125, 42, .12)", "--cover-core-0": "rgba(255, 102, 18, .5)",
+          "--cover-core-1": "rgba(255, 154, 36, .36)", "--cover-core-2": "rgba(255, 214, 94, .2)",
+          "--cover-core-3": "rgba(226, 156, 42, .09)", "--cover-action-a": "#ff7a1e",
+          "--cover-action-b": "#ffd76e", "--cover-action-c": "#d9942e", "--cover-action-text": "#211108"
+        }
+      },
+      amber: {
+        swatch: ["#ff4a00", "#ff9a22", "#105cff"],
+        colors: { core: "#ff3b00", mid: "#ff9820", bridge: "#176dff", outer: "#071f83", mist: "#263861" },
+        css: {
+          "--cover-wash-top": "rgba(22, 90, 255, .22)", "--cover-wash-mid": "rgba(255, 92, 12, .2)",
+          "--cover-wash-bridge": "rgba(26, 92, 255, .09)", "--cover-wash-side": "rgba(18, 112, 255, .12)",
+          "--cover-wash-bottom": "rgba(5, 32, 132, .16)", "--cover-core-0": "rgba(255, 70, 0, .54)",
+          "--cover-core-1": "rgba(255, 132, 24, .36)", "--cover-core-2": "rgba(255, 156, 34, .18)",
+          "--cover-core-3": "rgba(22, 94, 255, .085)", "--cover-action-a": "#ff4a00",
+          "--cover-action-b": "#ff9a22", "--cover-action-c": "#105cff", "--cover-action-text": "#071226"
+        }
+      },
+      cyan: {
+        swatch: ["#ff9b26", "#65e2d6", "#276fff"],
+        colors: { core: "#ff7920", mid: "#ffd064", bridge: "#4edfd3", outer: "#276fff", mist: "#355f86" },
+        css: {
+          "--cover-wash-top": "rgba(65, 180, 255, .18)", "--cover-wash-mid": "rgba(255, 166, 54, .13)",
+          "--cover-wash-bridge": "rgba(72, 220, 202, .075)", "--cover-wash-side": "rgba(71, 218, 213, .12)",
+          "--cover-wash-bottom": "rgba(35, 112, 255, .12)", "--cover-core-0": "rgba(255, 112, 24, .44)",
+          "--cover-core-1": "rgba(255, 196, 82, .29)", "--cover-core-2": "rgba(78, 223, 211, .13)",
+          "--cover-core-3": "rgba(39, 111, 255, .08)", "--cover-action-a": "#ff9b26",
+          "--cover-action-b": "#65e2d6", "--cover-action-c": "#276fff", "--cover-action-text": "#061525"
+        }
+      }
+    };
+    const INTRO_GALAXY_TIME_OFFSET = 60;
+
+    const state = {
+      selected: "earth",
+      lang: "zh",
+      coverTheme: "aurora",
+      knowledgeIndexes: [],
+      focusLocked: false,
+      activeView: "intro",
+      paused: false,
+      labels: true,
+      infoExpanded: false,
+      yearsPerSecond: .08,
+      cameraTweenSerial: 0,
+      startedAt: performance.now()
+    };
+
+    // DOM reference cache
+    const dom = {
+      galaxyCanvas: document.getElementById("galaxyCanvas"),
+      enterSolarButtons: document.querySelectorAll("[data-enter-solar]"),
+      stage: document.querySelector(".stage"),
+      canvas: document.getElementById("spaceCanvas"),
+      labels: document.getElementById("labels"),
+      dock: document.getElementById("planetDock"),
+      info: document.getElementById("planetInfo"),
+      loading: document.getElementById("loading"),
+      pause: document.getElementById("pauseBtn"),
+      system: document.getElementById("systemBtn"),
+      label: document.getElementById("labelBtn"),
+      speed: document.getElementById("speedRange"),
+      speedText: document.getElementById("speedText")
+    };
+
+    // Orbit scene initialization
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(46, 1, .1, 420);
+    const renderer = new THREE.WebGLRenderer({
+      canvas: dom.canvas,
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .06;
+    controls.minDistance = 6;
+    controls.maxDistance = 150;
+    controls.enablePan = false;
+    controls.autoRotate = false;
+
+    const clock = new THREE.Clock();
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const planetObjects = new Map();
+    const hitTargets = [];
+    let pointerDown = null;
+    let introDisposeTimer = null;
+
+    const introState = {
+      renderer: null, scene: null, camera: null,
+      galaxy: null, dust: null, core: null, stars: null, foreground: null,
+      clock: new THREE.Clock(), running: false, frame: null,
+      exiting: false, exitStartedAt: 0
+    };
+
+
+    function updateMobileControlClearance() {
+      const isSmall = window.matchMedia("(max-width: 780px)").matches;
+      const control = document.querySelector(".control-bar");
+      if (!control) return;
+      const rect = control.getBoundingClientRect();
+      if (rect) {
+        dom.stage.style.setProperty("--mobile-control-clearance", `${Math.ceil(rect.height + 20)}px`);
+      }
+    }
+
+    function scheduleMobileControlClearanceUpdate() {
+      updateMobileControlClearance();
+      requestAnimationFrame(updateMobileControlClearance);
+      window.setTimeout(updateMobileControlClearance, 120);
+    }
+
+    function getCoverTheme(id = state.coverTheme) {
+      return COVER_THEMES[id] || COVER_THEMES.aurora;
+    }
+
+    function createCoverThemeUniforms() {
+      const theme = getCoverTheme();
+      return {
+        uThemeCore: { value: new THREE.Color(theme.colors.core) },
+        uThemeMid: { value: new THREE.Color(theme.colors.mid) },
+        uThemeBridge: { value: new THREE.Color(theme.colors.bridge) },
+        uThemeOuter: { value: new THREE.Color(theme.colors.outer) },
+        uThemeMist: { value: new THREE.Color(theme.colors.mist) }
+      };
+    }
+
+    function applyCoverThemeToMaterial(material) {
+      if (!material || !material.uniforms) return;
+      const theme = getCoverTheme();
+      Object.entries({
+        uThemeCore: theme.colors.core,
+        uThemeMid: theme.colors.mid,
+        uThemeBridge: theme.colors.bridge,
+        uThemeOuter: theme.colors.outer,
+        uThemeMist: theme.colors.mist
+      }).forEach(([name, color]) => {
+        if (material.uniforms[name]) material.uniforms[name].value.set(color);
+      });
+    }
+
+    function applyCoverTheme() {
+      const theme = getCoverTheme();
+      if (dom.intro) {
+        Object.entries(theme.css).forEach(([name, value]) => {
+          dom.intro.style.setProperty(name, value);
+        });
+      }
+      [introState.galaxy, introState.dust, introState.stars, introState.foreground].forEach((object) => {
+        applyCoverThemeToMaterial(object && object.material);
+      });
+    }
+
+
+
+
+    function getPlanet(id) {
+      return PLANETS.find((planet) => planet.id === id) || PLANETS[0];
+    }
+
+    function getLocalizedPlanet(planet) {
+      if (planet && planet.isCustom) {
+        return {
+          displayName: planet.name, subName: "创造星球", type: planet.type,
+          diameter: planet.diameter, year: planet.year, distance: planet.distance,
+          summary: planet.summary, points: planet.points,
+          culture: planet.culture, knowledge: planet.knowledge || []
+        };
+      }
+      return {
+        displayName: planet.name, subName: planet.en, type: planet.type,
+        diameter: planet.diameter, year: planet.year, distance: planet.distance,
+        summary: planet.summary, points: planet.points,
+        culture: planet.culture, knowledge: KNOWLEDGE_ZH[planet.id] || []
+      };
+    }
+
+    function pickKnowledgeIndexes(planet) {
+      if (planet && planet.isCustom) return [0, 1];
+      const pool = KNOWLEDGE_ZH[planet.id] || [];
+      const indexes = pool.map((_, index) => index);
+      for (let i = indexes.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indexes[i], indexes[j]] = [indexes[j], indexes[i]];
+      }
+      return indexes.slice(0, Math.min(2, indexes.length));
+    }
+
+    function getKnowledgeItems(localized) {
+      if (getPlanet(state.selected).isCustom) {
+        return (localized.knowledge || []).slice(0, 2);
+      }
+      if (!state.knowledgeIndexes.length) {
+        state.knowledgeIndexes = pickKnowledgeIndexes(getPlanet(state.selected));
+      }
+      return state.knowledgeIndexes.map((index) => localized.knowledge[index]).filter(Boolean);
+    }
+
+    // 封面星系初始化：独立创建 WebGLRenderer，退出封面后会释放，避免长期占用显存。
+    function setupIntroGalaxy() {
+      if (!dom.galaxyCanvas || introState.renderer) return;
+      introState.running = true;
+      introState.exiting = false;
+      introState.exitStartedAt = 0;
+      introState.clock = new THREE.Clock();
+
+      introState.scene = new THREE.Scene();
+      introState.camera = new THREE.PerspectiveCamera(75, 1, .1, 140);
+      introState.camera.position.set(0, 3, 6);
+
+      introState.renderer = new THREE.WebGLRenderer({
+        canvas: dom.galaxyCanvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+        preserveDrawingBuffer: true
+      });
+      introState.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      introState.renderer.outputEncoding = THREE.sRGBEncoding;
+
+      introState.galaxy = createIntroGalaxy();
+      introState.scene.add(introState.galaxy);
+      introState.dust = createIntroDust();
+      introState.scene.add(introState.dust);
+      introState.core = createIntroCore();
+      introState.scene.add(introState.core);
+      introState.stars = createIntroStars();
+      introState.scene.add(introState.stars);
+      introState.foreground = createIntroForegroundParticles();
+      introState.scene.add(introState.foreground);
+      applyCoverTheme();
+
+      resizeIntroGalaxy();
+      window.addEventListener("resize", resizeIntroGalaxy);
+      animateIntroGalaxy();
+    }
+
+    // 旋臂星系：用 BufferGeometry 批量生成粒子位置/颜色/尺寸，ShaderMaterial 负责旋转、闪烁和柔光点形状。
+    function createIntroGalaxy() {
+      const isMobile = window.matchMedia("(max-width: 780px)").matches;
+      const count = isMobile ? 168000 : 260000;
+      const branches = 10;
+      const radius = isMobile ? 6.25 : 5.85;
+      const innerRadius = .12;
+      const spin = 1.14;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scales = new Float32Array(count);
+      const randoms = new Float32Array(count * 3);
+      const inner = new THREE.Color(0xff4f00);
+      const middle = new THREE.Color(isMobile ? 0xffaa16 : 0xffbd00);
+      const outer = new THREE.Color(0x167dff);
+
+      for (let i = 0; i < count; i += 1) {
+        const i3 = i * 3;
+        const minRadius = innerRadius * radius;
+        const distance = minRadius + Math.pow(Math.random(), 1.08) * (radius - minRadius);
+        const branchAngle = (i % branches) / branches * Math.PI * 2;
+        const spinAngle = distance * spin;
+        const ringCenter = (minRadius + radius) * .5;
+        const ringWidth = radius - minRadius;
+        const distanceToRingCenter = Math.abs(distance - ringCenter) / (ringWidth * .5);
+        const ringBias = Math.pow(Math.max(0, 1 - distanceToRingCenter), .58);
+        const edgeMix = (distance - minRadius) / (radius - minRadius);
+        const armScatter = Math.pow(Math.random(), 2.05) * distance * (.12 + edgeMix * .46 + ringBias * .28);
+        const heightScatter = Math.pow(Math.random(), 2.15) * distance * (.024 + edgeMix * .082);
+        const coreBulge = THREE.MathUtils.randFloatSpread(.42) * Math.pow(1 - edgeMix, 2.4);
+        const randomX = armScatter * (Math.random() < .5 ? -1 : 1);
+        const randomY = heightScatter * (Math.random() < .5 ? -1 : 1) + coreBulge;
+        const randomZ = armScatter * (Math.random() < .5 ? -1 : 1);
+
+        positions[i3] = Math.cos(branchAngle + spinAngle) * distance + randomX;
+        positions[i3 + 1] = randomY;
+        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * distance + randomZ;
+
+        const mix = edgeMix;
+        const color = mix < .48
+          ? inner.clone().lerp(middle, Math.pow(mix / .48, .72))
+          : middle.clone().lerp(outer, Math.pow((mix - .48) / .52, .8));
+        colors[i3] = color.r;
+        colors[i3 + 1] = color.g;
+        colors[i3 + 2] = color.b;
+        scales[i] = (.18 + Math.random() * .96) * (Math.random() > .992 ? 1.34 : 1);
+        randoms[i3] = Math.random();
+        randoms[i3 + 1] = Math.random();
+        randoms[i3 + 2] = Math.random();
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+      geometry.setAttribute("aRandom", new THREE.BufferAttribute(randoms, 3));
+
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        vertexColors: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uExit: { value: 0 },
+          uMobileCover: { value: 0 },
+          uSize: { value: (isMobile ? 23 : 30) * introState.renderer.getPixelRatio() },
+          ...createCoverThemeUniforms()
+        },
+        vertexShader: `
+          attribute float aScale;
+          attribute vec3 aRandom;
+          varying vec3 vColor;
+          varying float vAlpha;
+          varying float vEdge;
+          varying float vFront;
+          uniform float uTime;
+          uniform float uExit;
+          uniform float uMobileCover;
+          uniform float uSize;
+          void main() {
+            vColor = color;
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+            float angle = atan(modelPosition.x, modelPosition.z);
+            float distanceToCenter = length(modelPosition.xz);
+            vEdge = smoothstep(1.3, 5.8, distanceToCenter);
+            float rotationOffset = (1.0 / (distanceToCenter + 0.45)) * uTime * 0.035;
+            angle += rotationOffset + sin(uTime * 0.04 + aRandom.x * 6.283) * 0.003;
+            modelPosition.x = cos(angle) * distanceToCenter;
+            modelPosition.z = sin(angle) * distanceToCenter;
+            modelPosition.y += sin(uTime * 0.075 + position.x * 1.4 + position.z + aRandom.y * 6.283) * (0.006 + aRandom.z * 0.018);
+            vec3 burstDirection = normalize(vec3(modelPosition.x, modelPosition.y * 0.35 + 0.16, modelPosition.z));
+            modelPosition.xyz += burstDirection * uExit * (2.4 + aRandom.z * 5.2);
+            modelPosition.y += (aRandom.y - 0.5) * uExit * 1.6;
+            vFront = smoothstep(-4.2, 3.8, modelPosition.z + modelPosition.y * 0.85);
+            vec4 viewPosition = viewMatrix * modelPosition;
+            gl_Position = projectionMatrix * viewPosition;
+            gl_PointSize = uSize * aScale * (0.78 + vFront * 0.48) * (1.0 + uExit * 1.2) * (1.0 / max(0.58, -viewPosition.z));
+            float radialDust = mix(1.12, 0.82, smoothstep(0.16, 0.94, vEdge));
+            float broadDensityWave = 0.94 + sin(distanceToCenter * 1.12 + uTime * 0.035) * 0.06;
+            float globalDensity = mix(radialDust * broadDensityWave, 1.0, uMobileCover);
+            vAlpha = (0.48 + vFront * 0.22 + sin(uTime * 0.18 + aRandom.x * 6.283) * 0.08) * globalDensity * (1.0 - uExit * 0.38);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          varying float vAlpha;
+          varying float vEdge;
+          varying float vFront;
+          uniform float uMobileCover;
+          uniform vec3 uThemeCore;
+          uniform vec3 uThemeMid;
+          uniform vec3 uThemeBridge;
+          uniform vec3 uThemeOuter;
+          uniform vec3 uThemeMist;
+          void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            float strength = 1.0 - smoothstep(0.0, 0.52, d);
+            strength = pow(strength, 2.0);
+            vec3 color;
+            float alphaScale;
+            if (uMobileCover > 0.5) {
+              vec3 galaxyColor = mix(uThemeCore, uThemeMid, smoothstep(0.08, 0.68, vEdge));
+              galaxyColor = mix(galaxyColor, uThemeBridge, smoothstep(0.46, 0.96, vEdge));
+              galaxyColor = mix(galaxyColor, uThemeOuter, smoothstep(0.76, 1.06, vEdge));
+              galaxyColor = mix(galaxyColor, vColor, 0.2);
+              galaxyColor = mix(galaxyColor, uThemeMist, smoothstep(0.42, 1.0, vEdge) * 0.08);
+              float luma = dot(galaxyColor, vec3(0.299, 0.587, 0.114));
+              vec3 saturated = clamp(mix(vec3(luma), galaxyColor, 1.22), 0.0, 1.0);
+              color = saturated * (0.7 + vFront * 0.28 + strength * 0.7);
+              alphaScale = 0.64 + vFront * 0.28;
+            } else {
+              vec3 galaxyColor = mix(uThemeCore, uThemeMid, smoothstep(0.1, 0.64, vEdge));
+              galaxyColor = mix(galaxyColor, uThemeBridge, smoothstep(0.5, 0.96, vEdge));
+              galaxyColor = mix(galaxyColor, uThemeOuter, smoothstep(0.78, 1.06, vEdge));
+              galaxyColor = mix(galaxyColor, uThemeMist, 0.06 + smoothstep(0.42, 0.92, vEdge) * 0.08);
+              color = galaxyColor * (0.8 + vFront * 0.14 + strength * 0.2);
+              alphaScale = 0.5 + vFront * 0.16;
+            }
+            float centerDampen = mix(0.66, 1.0, smoothstep(0.04, 0.68, vEdge));
+            gl_FragColor = vec4(color * centerDampen, strength * vAlpha * alphaScale * centerDampen);
+          }
+        `
+      });
+
+      const galaxy = new THREE.Points(geometry, material);
+      galaxy.rotation.x = -0.08;
+      galaxy.rotation.z = 0.0;
+      galaxy.renderOrder = 2;
+      return galaxy;
+    }
+
+    // 星云尘埃层：低透明度大粒子叠在主星系后面，形成空间深度和雾化感。
+    function createIntroDust() {
+      const isMobile = window.matchMedia("(max-width: 780px)").matches;
+      const count = isMobile ? 24000 : 45000;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scales = new Float32Array(count);
+      const palette = [new THREE.Color(0xff4f00), new THREE.Color(isMobile ? 0xffaa16 : 0xffbd00), new THREE.Color(0x167dff), new THREE.Color(0x18c2ff)];
+
+      for (let i = 0; i < count; i += 1) {
+        const i3 = i * 3;
+        const radius = 2.2 + Math.random() * 13.8;
+        const angle = Math.random() * Math.PI * 2;
+        const height = THREE.MathUtils.randFloatSpread(4.4) * (1 - Math.min(radius / 20, .5));
+        positions[i3] = Math.cos(angle) * radius + THREE.MathUtils.randFloatSpread(4.4);
+        positions[i3 + 1] = height;
+        positions[i3 + 2] = Math.sin(angle) * radius + THREE.MathUtils.randFloatSpread(4.4);
+        const color = palette[i % palette.length].clone().lerp(new THREE.Color(0x39bfff), Math.random() * .025);
+        colors[i3] = color.r;
+        colors[i3 + 1] = color.g;
+        colors[i3 + 2] = color.b;
+        scales[i] = .18 + Math.random() * 1.15;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        vertexColors: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uExit: { value: 0 },
+          uSize: { value: (isMobile ? 8.3 : 12) * introState.renderer.getPixelRatio() },
+          ...createCoverThemeUniforms()
+        },
+        vertexShader: `
+          attribute float aScale;
+          varying vec3 vColor;
+          uniform float uTime;
+          uniform float uExit;
+          uniform float uSize;
+          void main() {
+            vColor = color;
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+            modelPosition.y += sin(uTime * 0.035 + position.x * 0.35) * 0.022;
+            vec3 burstDirection = normalize(vec3(modelPosition.x, modelPosition.y * 0.35 + 0.12, modelPosition.z));
+            modelPosition.xyz += burstDirection * uExit * 4.2;
+            vec4 viewPosition = viewMatrix * modelPosition;
+            gl_Position = projectionMatrix * viewPosition;
+            gl_PointSize = uSize * aScale * (1.0 + uExit * 1.5) * (1.0 / max(1.18, -viewPosition.z));
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          uniform float uExit;
+          uniform vec3 uThemeMid;
+          uniform vec3 uThemeOuter;
+          uniform vec3 uThemeMist;
+          void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            float strength = 1.0 - smoothstep(0.0, 0.58, d);
+            float luma = dot(vColor, vec3(0.299, 0.587, 0.114));
+            vec3 saturated = clamp(mix(vec3(luma), vColor, 1.08), 0.0, 1.0);
+            vec3 themeTint = mix(uThemeMid, uThemeOuter, smoothstep(0.22, 0.88, luma));
+            vec3 softened = mix(mix(saturated, themeTint, 0.32), uThemeMist, 0.08);
+            gl_FragColor = vec4(softened * (0.72 + strength * 0.4), strength * 0.07 * (1.0 - uExit * 0.25));
+          }
+        `
+      });
+
+      const dust = new THREE.Points(geometry, material);
+      dust.rotation.x = -0.05;
+      dust.rotation.z = 0.0;
+      dust.renderOrder = 0;
+      return dust;
+    }
+
+    // 星核光晕：用 canvas 生成径向渐变贴图，再作为 Sprite 叠加到 WebGL 场景中心。
+    function createIntroCore() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext("2d");
+      const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, "rgba(255, 92, 10, .44)");
+      gradient.addColorStop(.28, "rgba(255, 128, 18, .34)");
+      gradient.addColorStop(.58, "rgba(255, 176, 32, .14)");
+      gradient.addColorStop(1, "rgba(255, 176, 32, 0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 128, 128);
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        color: 0xffffff,
+        transparent: true,
+        opacity: .2,
+        depthWrite: false,
+        blending: window.matchMedia("(max-width: 780px)").matches ? THREE.AdditiveBlending : THREE.NormalBlending
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(1.95, 1.95, 1);
+      sprite.position.set(0, 0, 0);
+      return sprite;
+    }
+
+    function createIntroStars() {
+      const isMobile = window.matchMedia("(max-width: 780px)").matches;
+      const count = isMobile ? 86000 : 142000;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scales = new Float32Array(count);
+      const randoms = new Float32Array(count);
+      const cool = new THREE.Color(0x75dcff);
+      const warm = new THREE.Color(isMobile ? 0xffa526 : 0xffbd00);
+      const blue = new THREE.Color(0x257cff);
+      for (let i = 0; i < count; i += 1) {
+        const upperField = Math.random() < (isMobile ? .4 : .34);
+        if (upperField) {
+          positions[i * 3] = THREE.MathUtils.randFloatSpread(54);
+          positions[i * 3 + 1] = 5.8 + Math.random() * 28;
+          positions[i * 3 + 2] = -18 - Math.random() * 54;
+        } else {
+          const radius = 18 + Math.random() * 58;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(THREE.MathUtils.randFloatSpread(2));
+          positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+          positions[i * 3 + 1] = radius * Math.cos(phi) * .72;
+          positions[i * 3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+        }
+        const starPick = Math.random();
+        const baseColor = starPick < (upperField ? .08 : .18) ? warm : starPick < .58 ? cool : blue;
+        const color = baseColor.clone().lerp(new THREE.Color(0x45c7ff), Math.random() * .025);
+        colors[i * 3] = color.r;
+        colors[i * 3 + 1] = color.g;
+        colors[i * 3 + 2] = color.b;
+        scales[i] = (upperField ? .42 : .32) + Math.random() * (Math.random() > .94 ? 1.72 : upperField ? 1.18 : 1.02);
+        randoms[i] = Math.random();
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+      geometry.setAttribute("aRandom", new THREE.BufferAttribute(randoms, 1));
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        vertexColors: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uExit: { value: 0 },
+          uSize: { value: (isMobile ? 2.2 : 2.85) * introState.renderer.getPixelRatio() },
+          ...createCoverThemeUniforms()
+        },
+        vertexShader: `
+          attribute float aScale;
+          attribute float aRandom;
+          varying vec3 vColor;
+          varying float vAlpha;
+          uniform float uTime;
+          uniform float uExit;
+          uniform float uSize;
+          void main() {
+            vColor = color;
+            vec4 viewPosition = viewMatrix * modelMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * viewPosition;
+            float twinkle = 0.72 + sin(uTime * (0.12 + aRandom * 0.28) + aRandom * 6.283) * 0.18;
+            gl_PointSize = uSize * aScale * twinkle * (1.0 + uExit * 1.4);
+            vAlpha = (0.42 + twinkle * 0.5) * (1.0 - uExit * 0.22);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          varying float vAlpha;
+          uniform vec3 uThemeBridge;
+          uniform vec3 uThemeOuter;
+          void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            float strength = 1.0 - smoothstep(0.0, 0.62, d);
+            strength = pow(strength, 1.42);
+            float luma = dot(vColor, vec3(0.299, 0.587, 0.114));
+            vec3 saturated = clamp(mix(vec3(luma), vColor, 1.08), 0.0, 1.0);
+            vec3 themeTint = mix(uThemeBridge, uThemeOuter, smoothstep(0.28, 0.9, luma));
+            saturated = mix(saturated, themeTint, 0.18);
+            gl_FragColor = vec4(saturated * (0.8 + strength * 0.74), strength * vAlpha * 0.86);
+          }
+        `
+      });
+      const stars = new THREE.Points(geometry, material);
+      stars.renderOrder = -1;
+      return stars;
+    }
+
+    function createIntroForegroundParticles() {
+      const isMobile = window.matchMedia("(max-width: 780px)").matches;
+      const count = isMobile ? 15000 : 30000;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scales = new Float32Array(count);
+      const speeds = new Float32Array(count);
+      const randoms = new Float32Array(count);
+
+      for (let i = 0; i < count; i += 1) {
+        const i3 = i * 3;
+        const z = 0.6 + Math.random() * 4.8;
+        const spread = 1.1 + z * 0.92;
+        positions[i3] = THREE.MathUtils.randFloatSpread(spread * 3.2);
+        positions[i3 + 1] = THREE.MathUtils.randFloatSpread(spread * 1.7) + 0.35;
+        positions[i3 + 2] = z;
+        colors[i3] = i % 7 === 0 ? 1 : 0;
+        colors[i3 + 1] = i % 3 === 0 ? 1 : 0;
+        colors[i3 + 2] = i % 7 !== 0 && i % 3 !== 0 ? 1 : 0;
+        scales[i] = .52 + Math.random() * (Math.random() > .9 ? 2.45 : 1.25);
+        speeds[i] = .22 + Math.random() * .9;
+        randoms[i] = Math.random();
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("aScale", new THREE.BufferAttribute(scales, 1));
+      geometry.setAttribute("aSpeed", new THREE.BufferAttribute(speeds, 1));
+      geometry.setAttribute("aRandom", new THREE.BufferAttribute(randoms, 1));
+
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        blending: THREE.NormalBlending,
+        vertexColors: true,
+        uniforms: {
+          uTime: { value: 0 },
+          uExit: { value: 0 },
+          uSize: { value: (isMobile ? 10 : 14.2) * introState.renderer.getPixelRatio() },
+          ...createCoverThemeUniforms()
+        },
+        vertexShader: `
+          attribute float aScale;
+          attribute float aSpeed;
+          attribute float aRandom;
+          varying vec3 vColor;
+          varying float vAlpha;
+          uniform float uTime;
+          uniform float uExit;
+          uniform float uSize;
+          void main() {
+            vColor = color;
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+            float lane = mod(modelPosition.z + uTime * (0.16 + aSpeed * 0.22), 5.2);
+            modelPosition.z = 0.5 + lane;
+            modelPosition.x += sin(uTime * 0.12 + aRandom * 6.283) * 0.08;
+            modelPosition.y += cos(uTime * 0.1 + aRandom * 6.283) * 0.05;
+            vec3 burstDirection = normalize(vec3(modelPosition.x, modelPosition.y * 0.6, modelPosition.z - 2.4));
+            modelPosition.xyz += burstDirection * uExit * (2.2 + aSpeed * 3.4);
+            vec4 viewPosition = viewMatrix * modelPosition;
+            gl_Position = projectionMatrix * viewPosition;
+            float nearBoost = 1.0 / max(0.34, -viewPosition.z);
+            gl_PointSize = min(34.0, uSize * aScale * nearBoost * (1.0 + uExit * 0.8));
+            vAlpha = (0.34 + aSpeed * 0.38) * (1.0 - uExit * 0.18);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vColor;
+          varying float vAlpha;
+          uniform vec3 uThemeCore;
+          uniform vec3 uThemeMid;
+          uniform vec3 uThemeBridge;
+          uniform vec3 uThemeOuter;
+          uniform vec3 uThemeMist;
+          void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            float core = 1.0 - smoothstep(0.0, 0.6, d);
+            float halo = 1.0 - smoothstep(0.16, 0.66, d);
+            vec3 themed = uThemeCore * vColor.r + uThemeBridge * vColor.g + uThemeMid * vColor.b;
+            themed = mix(themed, uThemeOuter, 0.16 + vColor.b * 0.1);
+            themed = mix(themed, uThemeMist, 0.06);
+            themed = mix(themed, vec3(1.0), core * 0.16);
+            vec3 color = themed * (0.82 + core * 0.5);
+            gl_FragColor = vec4(color, (pow(core, 1.68) + halo * 0.12) * vAlpha * 0.56);
+          }
+        `
+      });
+
+      const foreground = new THREE.Points(geometry, material);
+      foreground.renderOrder = 4;
+      return foreground;
+    }
+
+    // 封面动画循环：更新 shader 时间、粒子层旋转、星核呼吸和相机微漂移。
+    function animateIntroGalaxy() {
+      if (!introState.running || !introState.renderer) return;
+      introState.frame = requestAnimationFrame(animateIntroGalaxy);
+      const rawElapsed = introState.clock.getElapsedTime();
+      const elapsed = rawElapsed + INTRO_GALAXY_TIME_OFFSET;
+      const rawExit = introState.exiting ? THREE.MathUtils.clamp((rawElapsed - introState.exitStartedAt) / .92, 0, 1) : 0;
+      const exitProgress = 1 - Math.pow(1 - rawExit, 3);
+
+      if (introState.galaxy) {
+        introState.galaxy.rotation.y = elapsed * .0045;
+        introState.galaxy.material.uniforms.uTime.value = elapsed;
+        introState.galaxy.material.uniforms.uExit.value = exitProgress;
+      }
+      if (introState.dust) {
+        introState.dust.rotation.y = -elapsed * .0015;
+        introState.dust.material.uniforms.uTime.value = elapsed;
+        introState.dust.material.uniforms.uExit.value = exitProgress;
+      }
+      if (introState.core) {
+        const pulse = 1 + Math.sin(elapsed * .46) * .06;
+        introState.core.scale.set(1.15 * pulse, 1.15 * pulse, 1);
+        introState.core.material.opacity = .26 + Math.sin(elapsed * .46) * .045;
+      }
+      if (introState.stars) {
+        introState.stars.rotation.y = -elapsed * .0009;
+        if (introState.stars.material.uniforms) {
+          introState.stars.material.uniforms.uTime.value = elapsed;
+          introState.stars.material.uniforms.uExit.value = exitProgress;
+        }
+      }
+      if (introState.foreground && introState.foreground.material.uniforms) {
+        introState.foreground.material.uniforms.uTime.value = elapsed;
+        introState.foreground.material.uniforms.uExit.value = exitProgress;
+      }
+
+      const isMobile = window.matchMedia("(max-width: 780px)").matches;
+      const cameraBaseY = isMobile ? 3.18 : 3.08;
+      const cameraBaseZ = isMobile ? 6.24 : 5.95;
+      introState.camera.position.x = Math.sin(elapsed * .022) * .18;
+      introState.camera.position.y = cameraBaseY + Math.sin(elapsed * .028) * .06;
+      introState.camera.position.z = cameraBaseZ + Math.cos(elapsed * .02) * .08;
+      introState.camera.lookAt(0, 0, 0);
+      introState.renderer.render(introState.scene, introState.camera);
+    }
+
+    function resizeIntroGalaxy() {
+      if (!introState.renderer || !introState.camera) return;
+      const width = Math.max(320, window.innerWidth);
+      const height = Math.max(520, window.innerHeight);
+      introState.renderer.setSize(width, height, false);
+      introState.camera.aspect = width / height;
+      introState.camera.updateProjectionMatrix();
+      if (introState.galaxy && introState.galaxy.material.uniforms) {
+        const isMobile = width <= 780;
+        introState.galaxy.material.uniforms.uSize.value = (isMobile ? 23 : 30) * introState.renderer.getPixelRatio();
+      }
+      if (introState.dust && introState.dust.material.uniforms) {
+        const isMobile = width <= 780;
+        introState.dust.material.uniforms.uSize.value = (isMobile ? 8.3 : 12) * introState.renderer.getPixelRatio();
+      }
+      if (introState.stars && introState.stars.material.uniforms) {
+        const isMobile = width <= 780;
+        introState.stars.material.uniforms.uSize.value = (isMobile ? 2.2 : 2.85) * introState.renderer.getPixelRatio();
+      }
+      if (introState.foreground && introState.foreground.material.uniforms) {
+        const isMobile = width <= 780;
+        introState.foreground.material.uniforms.uSize.value = (isMobile ? 10 : 14.2) * introState.renderer.getPixelRatio();
+      }
+    }
+
+    function enterSolarSystem() {
+      if (!dom.intro || dom.intro.classList.contains("is-hidden")) return;
+      if (introState.exiting) return;
+      scheduleHorizontalScrollReset();
+      introState.exiting = true;
+      introState.exitStartedAt = introState.clock ? introState.clock.getElapsedTime() : 0;
+      dom.intro.classList.add("is-exiting");
+      dom.intro.dataset.transitionState = "exiting";
+      if (introDisposeTimer) window.clearTimeout(introDisposeTimer);
+      // 星尘散去: animateIntroGalaxy 中 uExit uniform 驱动所有粒子层向外发散并变淡
+      window.setTimeout(() => {
+        try { localStorage.setItem("orbitEntered", "true"); } catch {}
+        location.reload();
+      }, 1400);
+    }
+    function disposeIntroGalaxy() {
+      if (!introState.running && !introState.renderer) return;
+      introState.running = false;
+      introDisposeTimer = null;
+      if (introState.frame) cancelAnimationFrame(introState.frame);
+      window.removeEventListener("resize", resizeIntroGalaxy);
+      [introState.galaxy, introState.dust, introState.core, introState.stars, introState.foreground].forEach(disposeIntroObject);
+      if (introState.renderer) introState.renderer.dispose();
+      introState.renderer = null;
+      introState.scene = null;
+      introState.camera = null;
+      introState.galaxy = null;
+      introState.dust = null;
+      introState.core = null;
+      introState.stars = null;
+      introState.foreground = null;
+      introState.frame = null;
+      introState.exiting = false;
+      introState.exitStartedAt = 0;
+      if (dom.intro) dom.intro.style.display = "none";
+    }
+
+    function resetHorizontalScroll() {
+      const x = window.scrollX || document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+      if (!x) return;
+      const y = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      document.documentElement.scrollLeft = 0;
+      document.body.scrollLeft = 0;
+      window.scrollTo({ left: 0, top: y, behavior: "auto" });
+    }
+
+    function scheduleHorizontalScrollReset() {
+      resetHorizontalScroll();
+      requestAnimationFrame(resetHorizontalScroll);
+      window.setTimeout(resetHorizontalScroll, 80);
+    }
+
+    function formatSpeed() {
+      return `${state.yearsPerSecond.toFixed(2)} ${text().yearsPerSecond}`;
+    }
+
+        function disposeIntroObject(object) {
+      if (!object) return;
+      object.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((material) => {
+          if (!material) return;
+          if (material.map) material.map.dispose();
+          material.dispose();
+        });
+      });
+    }
+
+
+    // 主轨道舱灯光：环境光保证模型可见，太阳点光源和边缘光增强空间层次。
+    function setupLights() {
+      scene.add(new THREE.AmbientLight(0xdce7ff, .72));
+
+      const sunLight = new THREE.PointLight(0xffdf94, 3.2, 180, 1.4);
+      sunLight.position.set(0, 0, 0);
+      scene.add(sunLight);
+
+      const rimLight = new THREE.DirectionalLight(0x86d8ff, .58);
+      rimLight.position.set(-26, 34, 24);
+      scene.add(rimLight);
+    }
+
+    // 主场景星空：用 Points 批量生成远处星点，不使用图片背景，便于随相机产生真实空间视差。
+    function setupStars() {
+      const count = 1800;
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const palette = [
+        new THREE.Color(0xffffff),
+        new THREE.Color(0xb7d6ff),
+        new THREE.Color(0xffe3b8),
+        new THREE.Color(0xc8fff8)
+      ];
+
+      for (let i = 0; i < count; i += 1) {
+        const radius = 110 + Math.random() * 115;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(THREE.MathUtils.randFloatSpread(2));
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.cos(phi) * .72;
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+
+        const color = palette[Math.floor(Math.random() * palette.length)];
+        const intensity = .45 + Math.random() * .55;
+        colors[i * 3] = color.r * intensity;
+        colors[i * 3 + 1] = color.g * intensity;
+        colors[i * 3 + 2] = color.b * intensity;
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const material = new THREE.PointsMaterial({
+        size: .16,
+        vertexColors: true,
+        transparent: true,
+        opacity: .86,
+        depthWrite: false
+      });
+      scene.add(new THREE.Points(geometry, material));
+    }
+
+    function setupSun() {
+      const sunGeometry = new THREE.SphereGeometry(3.35, 72, 36);
+      const sunMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffc95c
+      });
+      const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+      rootGroup.add(sun);
+
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: createGlowTexture(),
+        color: 0xffd778,
+        transparent: true,
+        opacity: .72,
+        depthWrite: false
+      }));
+      glow.scale.set(16, 16, 1);
+      rootGroup.add(glow);
+
+      const corona = new THREE.Mesh(
+        new THREE.SphereGeometry(3.72, 72, 36),
+        new THREE.MeshBasicMaterial({
+          color: 0xfff0bd,
+          transparent: true,
+          opacity: .16,
+          wireframe: true
+        })
+      );
+      rootGroup.add(corona);
+      planetObjects.set("sun", { body: sun, corona });
+    }
+
+    function createGlowTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const context = canvas.getContext("2d");
+      const gradient = context.createRadialGradient(128, 128, 8, 128, 128, 128);
+      gradient.addColorStop(0, "rgba(255, 248, 194, 1)");
+      gradient.addColorStop(.25, "rgba(255, 196, 80, .72)");
+      gradient.addColorStop(.58, "rgba(255, 132, 64, .18)");
+      gradient.addColorStop(1, "rgba(255, 132, 64, 0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 256, 256);
+      return new THREE.CanvasTexture(canvas);
+    }
+
+    // 八大行星加载流程：先显示 NASA 高清图贴图球，GLB 模型后台加载成功后自动替换，失败时保留备用几何体。
+    // stardust scatter driven by uExit in animateIntroGalaxy??? 2K NASA ?????????
+    function setupPlanets() {
+      const textureLoader = new THREE.TextureLoader();
+      PLANETS.forEach((planet, index) => {
+        const orbit = createOrbit(planet);
+        rootGroup.add(orbit);
+
+        const group = new THREE.Group();
+        group.name = planet.name;
+        group.userData.planetId = planet.id;
+        group.userData.angle = (Math.PI * 2 * index) / PLANETS.length + index * .27;
+        group.userData.planet = planet;
+        rootGroup.add(group);
+
+        const visualGroup = new THREE.Group();
+        group.add(visualGroup);
+
+        const hit = new THREE.Mesh(
+          new THREE.SphereGeometry(Math.max(planet.size * 1.8, 1.8), 32, 16),
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(planet.color),
+            transparent: true,
+            opacity: .001,
+            depthWrite: false
+          })
+        );
+        hit.userData.planetId = planet.id;
+        group.add(hit);
+        hitTargets.push(hit);
+
+        const label = document.createElement("div");
+        label.className = "space-label";
+        label.textContent = planet.name;
+        label.style.setProperty("--planet-color", planet.color);
+        dom.labels.appendChild(label);
+
+        // Textured sphere
+        const material = new THREE.MeshStandardMaterial({
+          roughness: .82,
+          metalness: 0
+        });
+        const sphere = new THREE.Mesh(new THREE.SphereGeometry(planet.size, 80, 40), material);
+        sphere.rotation.x = planet.tilt;
+        visualGroup.add(sphere);
+
+        textureLoader.load(
+          planet.image,
+          (texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 12);
+            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            material.map = texture;
+            material.needsUpdate = true;
+          },
+          undefined,
+          () => {
+            material.color.set(planet.color);
+            material.needsUpdate = true;
+          }
+        );
+
+        // Atmosphere glow
+        if (["earth", "venus", "uranus", "neptune"].includes(planet.id)) {
+          const atmosphere = new THREE.Mesh(
+            new THREE.SphereGeometry(planet.size * 1.04, 48, 24),
+            new THREE.MeshBasicMaterial({
+              color: new THREE.Color(planet.color),
+              transparent: true,
+              opacity: planet.id === "venus" ? .08 : .1,
+              depthWrite: false,
+              side: THREE.BackSide
+            })
+          );
+          visualGroup.add(atmosphere);
+        }
+
+        // Saturn ring
+        if (planet.id === "saturn") {
+          const ringGeo = new THREE.RingGeometry(planet.size * 1.38, planet.size * 2.22, 128);
+          const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: .85,
+            side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          const ring = new THREE.Mesh(ringGeo, ringMat);
+          ring.rotation.x = Math.PI / 2.55;
+          visualGroup.add(ring);
+          textureLoader.load(
+            planet.image.replace("saturn.jpg", "saturn_ring.png"),
+            (tex) => {
+              tex.encoding = THREE.sRGBEncoding;
+              ringMat.map = tex;
+              ringMat.needsUpdate = true;
+            }
+          );
+        }
+
+        const item = { planet, group, visualGroup, orbit, hit, label };
+        planetObjects.set(planet.id, item);
+      });
+    }
+
+    function createOrbit(planet) {
+      const curve = new THREE.EllipseCurve(
+        0,
+        0,
+        planet.orbit * planet.oval,
+        planet.orbit,
+        0,
+        Math.PI * 2,
+        false,
+        0
+      );
+      const points = curve.getPoints(360).map((point) => new THREE.Vector3(point.x, 0, point.y));
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({
+        color: new THREE.Color(planet.color),
+        transparent: true,
+        opacity: .28
+      });
+      const line = new THREE.LineLoop(geometry, material);
+      line.rotation.x = planet.tilt;
+      return line;
+    }
+
+    // 5 秒内可见的贴图预览：先用 NASA 图片贴到球体上，解决 GLB 首次加载较慢时的空白等待。
+
+
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    // 真实化表面细节：根据表面类型叠加海陆云层、气态条带、冰裂极冠或岩石撞击坑。
+
+    // NASA 纹理拼接：按元素比例从 NASA 行星图中取不规则色块，羽化边缘后再叠加表面结构。
+
+    // 手绘纹理：Pointer/Mouse/Touch 三套事件兼容桌面和手机，绘制结果保存为 dataURL 供 3D 材质使用。
+
+
+    function getOrbitPlanets() {
+      return PLANETS;
+    }
+
+    function renderDock() {
+      dom.dock.innerHTML = "";
+      getOrbitPlanets().forEach((planet) => {
+        const localized = getLocalizedPlanet(planet);
+        const button = document.createElement("button");
+        button.className = `planet-btn${planet.id === state.selected ? " active" : ""}${planet}`;
+        button.type = "button";
+        button.dataset.planet = planet.id;
+        button.style.setProperty("--planet-color", planet.color);
+        button.innerHTML = `
+          <span class="swatch-line"><span class="swatch" aria-hidden="true"></span><b>${localized.displayName}</b></span>
+          <span>${localized.subName}</span>
+        `;
+        button.addEventListener("click", () => selectPlanet(planet.id, true));
+        dom.dock.appendChild(button);
+      });
+      scheduleMobileControlClearanceUpdate();
+    }
+
+    function renderInfo(planet) {
+      const t = text();
+      const localized = getLocalizedPlanet(planet);
+      const knowledgeItems = getKnowledgeItems(localized);
+      dom.info.style.setProperty("--planet-color", planet.color);
+      dom.info.classList.toggle("expanded", state.infoExpanded);
+      dom.info.innerHTML = `
+        <button class="info-collapse" type="button" aria-expanded="${state.infoExpanded}" aria-label="${localized.displayName}">
+          <span>${localized.displayName}</span>
+        </button>
+        <div class="info-head">
+          <p class="planet-kicker">${localized.type}</p>
+          <h2 class="planet-name">${localized.displayName}<span>${localized.subName}</span></h2>
+          <p class="planet-summary">${localized.summary}</p>
+        </div>
+        <div class="facts-grid">
+          <div class="fact"><small>${t.diameter}</small><strong>${localized.diameter}</strong></div>
+          <div class="fact"><small>${t.year}</small><strong>${localized.year}</strong></div>
+          <div class="fact"><small>${t.distance}</small><strong>${localized.distance}</strong></div>
+        </div>
+        <section class="knowledge-box" aria-label="${localized.displayName}${t.knowledgeHeader}">
+          <h3>${t.knowledgeHeader}</h3>
+          <ul class="knowledge-list">
+            ${knowledgeItems.map((item) => `<li>${item}</li>`).join("")}
+          </ul>
+        </section>
+        <ul class="planet-points">
+          ${localized.points.map((point) => `<li>${point}</li>`).join("")}
+        </ul>
+        <section class="culture-box" aria-label="${localized.displayName}${t.cultureHeader}">
+          <h3>${t.cultureHeader}</h3>
+          <p>${localized.culture.text}</p>
+          <div class="culture-tags">
+            ${localized.culture.tags.map((tag) => `<span>${tag}</span>`).join("")}
+          </div>
+        </section>
+      `;
+    }
+
+    // 高清图谱模式：根据当前行星渲染图像释义、随机知识点和文化说明，和 3D 模式共享同一套数据源。
+
+    function toggleInfoPanel(forceExpanded) {
+      state.infoExpanded = typeof forceExpanded === "boolean" ? forceExpanded : !state.infoExpanded;
+      if (!dom.info) return;
+      dom.info.classList.toggle("expanded", state.infoExpanded);
+      const toggle = dom.info.querySelector(".info-collapse");
+      if (toggle) toggle.setAttribute("aria-expanded", String(state.infoExpanded));
+    }
+
+    function setupEvents() {
+      dom.enterSolarButtons.forEach((button) => {
+        button.addEventListener("click", enterSolarSystem);
+      });
+
+
+            if (dom.info) {
+        dom.info.addEventListener("click", (event) => {
+          const toggle = event.target && event.target.closest ? event.target.closest(".info-collapse") : null;
+          if (!toggle) return;
+          toggleInfoPanel();
+        });
+      }
+
+      dom.pause.addEventListener("click", () => {
+        state.paused = !state.paused;
+        dom.pause.textContent = state.paused ? text().play : text().pause;
+        dom.pause.setAttribute("aria-pressed", String(state.paused));
+      });
+
+      dom.system.addEventListener("click", () => {
+        showSystemView(true);
+      });
+
+      dom.label.addEventListener("click", () => {
+        state.labels = !state.labels;
+        dom.label.setAttribute("aria-pressed", String(state.labels));
+        dom.labels.style.display = state.labels ? "block" : "none";
+      });
+
+      dom.speed.addEventListener("input", () => {
+        state.yearsPerSecond = Number(dom.speed.value);
+        dom.speedText.textContent = formatSpeed();
+      });
+
+      document.addEventListener("dblclick", (event) => {
+        if (state.activeView !== "orbit" || !state.focusLocked) return;
+        const target = event.target;
+        if (target && target.closest && target.closest("button, input, select, textarea, a, label, .control-bar, .planet-dock, .info-panel, .nav")) return;
+        event.preventDefault();
+        showSystemView(true);
+      }, true);
+
+      renderer.domElement.addEventListener("pointerdown", (event) => {
+        pointerDown = { x: event.clientX, y: event.clientY };
+      });
+
+      renderer.domElement.addEventListener("pointerup", (event) => {
+        if (!pointerDown) return;
+        const distance = Math.hypot(event.clientX - pointerDown.x, event.clientY - pointerDown.y);
+        pointerDown = null;
+        if (distance > 8) return;
+        pickPlanet(event);
+      });
+
+      window.addEventListener("resize", () => {
+        resize();
+        scheduleHorizontalScrollReset();
+        scheduleMobileControlClearanceUpdate();
+      });
+
+      window.addEventListener("scroll", resetHorizontalScroll, { passive: true });
+    }
+
+    function selectPlanet(id, shouldFocus) {
+      scheduleHorizontalScrollReset();
+      state.selected = id;
+      const planet = getPlanet(id);
+      
+      state.knowledgeIndexes = pickKnowledgeIndexes(planet);
+      renderInfo(planet);
+      dom.dock.querySelectorAll(".planet-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.planet === id);
+      });
+
+      planetObjects.forEach((item, key) => {
+        if (!item.orbit || !item.orbit.material) return;
+        item.orbit.material.opacity = key === id ? .72 : .26;
+      });
+
+      if (shouldFocus) focusPlanet(id, true);
+      scheduleHorizontalScrollReset();
+      scheduleMobileControlClearanceUpdate();
+    }
+
+    // 3D/高清图切换：只切换 UI 和当前行星模型显示状态，不销毁主场景，返回 3D 时响应更快。
+
+    function pickPlanet(event) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(hitTargets, false);
+      if (hits.length) {
+        const id = hits[0].object.userData.planetId;
+        if (id) selectPlanet(id, true);
+      }
+    }
+
+    function focusPlanet(id, animateMove) {
+      const item = planetObjects.get(id);
+      const selectedPosition = item ? item.group.position.clone() : new THREE.Vector3();
+      const offset = getFocusOffset();
+      const destination = selectedPosition.clone().add(offset);
+
+      if (!animateMove) {
+        state.cameraTweenSerial += 1;
+        state.focusLocked = true;
+        camera.position.copy(destination);
+        controls.target.copy(selectedPosition);
+        controls.update();
+        return;
+      }
+
+      state.focusLocked = false;
+      tweenCamera(camera.position.clone(), destination, controls.target.clone(), selectedPosition, 620, () => {
+        state.focusLocked = true;
+      });
+    }
+
+    function showSystemView(animateMove) {
+      state.focusLocked = false;
+      const isSmall = window.matchMedia("(max-width: 780px)").matches;
+      const destination = isSmall
+        ? new THREE.Vector3(0, 86, 132)
+        : new THREE.Vector3(0, 68, 96);
+      const target = new THREE.Vector3(0, 0, 0);
+
+      if (!animateMove) {
+        state.cameraTweenSerial += 1;
+        camera.position.copy(destination);
+        controls.target.copy(target);
+        controls.update();
+        return;
+      }
+
+      tweenCamera(camera.position.clone(), destination, controls.target.clone(), target, 680);
+    }
+
+    function getFocusOffset() {
+      const isSmall = window.matchMedia("(max-width: 780px)").matches;
+      return isSmall
+        ? new THREE.Vector3(0, 7, 13)
+        : new THREE.Vector3(0, 5, 10);
+    }
+
+    function updateFocusFollow() {
+      const item = planetObjects.get(state.selected);
+      if (!item) return;
+      const selectedPosition = item.group.position.clone();
+      camera.position.copy(selectedPosition.clone().add(getFocusOffset()));
+      controls.target.copy(selectedPosition);
+    }
+
+    function tweenCamera(fromPos, toPos, fromTarget, toTarget, duration, onComplete) {
+      const tweenSerial = state.cameraTweenSerial + 1;
+      state.cameraTweenSerial = tweenSerial;
+      const started = performance.now();
+      const step = () => {
+        if (tweenSerial !== state.cameraTweenSerial) return;
+        const progress = Math.min((performance.now() - started) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        camera.position.lerpVectors(fromPos, toPos, eased);
+        controls.target.lerpVectors(fromTarget, toTarget, eased);
+        controls.update();
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else if (onComplete) {
+          onComplete();
+        }
+      };
+      step();
+    }
+
+    // 轨道动画：用年/秒滑块控制角速度，轨道距离和速度均为科普展示压缩比例。
+    function updatePlanetPositions(delta) {
+      getOrbitPlanets().forEach((planet) => {
+        const item = planetObjects.get(planet.id);
+        if (!item) return;
+
+        if (!state.paused) {
+          item.group.userData.angle += delta * state.yearsPerSecond * planet.speed * Math.PI * 2;
+        }
+
+        const angle = item.group.userData.angle;
+        const x = Math.cos(angle) * planet.orbit * planet.oval;
+        const z = Math.sin(angle) * planet.orbit;
+        const y = Math.sin(angle * 1.7 + planet.tilt * 8) * planet.tilt * 5.4;
+        item.group.position.set(x, y, z);
+
+        if (!state.paused) {
+          item.group.rotation.y += delta * planet.rotation;
+        }
+      });
+
+      const sun = planetObjects.get("sun");
+      if (sun && sun.body && !state.paused) {
+        sun.body.rotation.y += delta * .24;
+        sun.corona.rotation.y -= delta * .08;
+      }
+    }
+
+    function updateLabels() {
+      if (!state.labels) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+
+      getOrbitPlanets().forEach((planet) => {
+        const item = planetObjects.get(planet.id);
+        if (!item || !item.label) return;
+        const position = item.group.position.clone();
+        const toPlanet = position.clone().sub(camera.position).normalize();
+        const visible = cameraDirection.dot(toPlanet) > 0;
+        const projected = position.project(camera);
+        const inFrame = visible && projected.z < 1 && projected.x > -1.18 && projected.x < 1.18 && projected.y > -1.18 && projected.y < 1.18;
+        const left = (projected.x * .5 + .5) * width;
+        const centerTop = (-projected.y * .5 + .5) * height;
+        const labelRadius = planet.id === "saturn" ? planet.size * 2.35 : planet.size * 1.18;
+        const edgeProjected = item.group.position.clone().add(new THREE.Vector3(0, labelRadius, 0)).project(camera);
+        const edgeTop = (-edgeProjected.y * .5 + .5) * height;
+        const screenRadius = Math.abs(centerTop - edgeTop);
+        const top = centerTop - Math.max(22, screenRadius + 18);
+        const covered = isPointCoveredByInterface(left, top);
+        item.label.style.opacity = inFrame && !covered ? (planet.id === state.selected ? "1" : ".78") : "0";
+        item.label.style.left = `${left}px`;
+        item.label.style.top = `${top}px`;
+      });
+    }
+
+    function isPointCoveredByInterface(x, y) {
+      const selectors = [".topbar", ".hero-copy", ".info-panel", ".control-bar"];
+      return selectors.some((selector) => {
+        const element = document.querySelector(selector);
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        return x >= rect.left - 8 && x <= rect.right + 8 && y >= rect.top - 8 && y <= rect.bottom + 8;
+      });
+    }
+
+    function resize() {
+      const rect = dom.stage.getBoundingClientRect();
+      const width = Math.max(320, rect.width);
+      const height = Math.max(520, rect.height);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+
+      if (width < 780) {
+        camera.fov = 52;
+        controls.maxDistance = 180;
+      } else {
+        camera.fov = 46;
+        controls.maxDistance = 150;
+      }
+      camera.updateProjectionMatrix();
+    }
+
+    // stardust scatter driven by uExit in animateIntroGalaxy?????????????????????????????
+    // stardust scatter driven by uExit in animateIntroGalaxy????????????
+    function bootstrap() {
+      const entered = (function(){ try { return localStorage.getItem("orbitEntered") === "true"; } catch { return false; } })();
+      if (!entered) {
+        setupIntroGalaxy();
+      } else {
+        if (dom.intro) {
+          dom.intro.classList.add("is-hidden");
+          dom.intro.dataset.transitionState = "hidden";
+        }
+        state.activeView = "orbit";
+      }
+      setupLights();
+      setupStars();
+      setupSun();
+      state.knowledgeIndexes = pickKnowledgeIndexes(getPlanet(state.selected));
+      renderDock();
+      renderInfo(getPlanet(state.selected));
+      setupEvents();
+      scheduleMobileControlClearanceUpdate();
+      resize();
+      updatePlanetPositions(0);
+      showSystemView(false);
+      animate();
+    }
+    bootstrap();
+
+    // 主动画循环：更新行星位置、聚焦跟随、标签投影和最终 WebGL 渲染。
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), .04);
+      updatePlanetPositions(delta);
+      updateFocusFollow();
+      controls.update();
+      updateLabels();
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+</html>
+
